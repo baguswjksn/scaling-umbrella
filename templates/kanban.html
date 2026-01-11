@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Kanban</title>
+<style>
+:root {
+  --black: #111;
+  --gray: #666;
+  --light-gray: #e5e5e5;
+  --bg: #fafafa;
+}
+
+* {
+  box-sizing: border-box;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+}
+
+body {
+  margin: 32px;
+  background: var(--bg);
+  color: var(--black);
+}
+
+h1 {
+  text-align: center;
+  margin-bottom: 32px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+/* ADD TASK BUTTON */
+#openModal {
+  width: auto;
+  padding: 10px 16px;
+  font-size: 14px;
+  border: 1px solid var(--black);
+  background: #fff;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+#openModal:hover {
+  background: var(--black);
+  color: #fff;
+}
+
+/* BOARD */
+.board {
+  display: flex;
+  gap: 24px;
+}
+
+/* COLUMN */
+.column {
+  flex: 1;
+  background: #fff;
+  border: 1px solid var(--black);
+  padding: 12px;
+  min-height: 360px;
+  box-shadow: 3px 3px 0 var(--black);
+}
+
+.column h2 {
+  margin: 0 0 16px;
+  text-align: center;
+  font-size: 15px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border-bottom: 1px solid var(--black);
+  padding-bottom: 8px;
+}
+
+/* TASK */
+.task {
+  border: 1px solid var(--black);
+  padding: 10px;
+  margin-bottom: 10px;
+  background: #fff;
+  cursor: grab;
+  font-size: 14px;
+  line-height: 1.4;
+  box-shadow: 2px 2px 0 var(--black);
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.task:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 var(--black);
+}
+
+.task:active {
+  cursor: grabbing;
+}
+
+/* DELETE LINK */
+.task a {
+  float: right;
+  text-decoration: none;
+  color: var(--gray);
+  font-weight: bold;
+}
+
+.task a:hover {
+  color: var(--black);
+}
+
+/* DRAG OVER FEEDBACK */
+.column.drag-over {
+  background: #f0f0f0;
+}
+
+/* MODAL */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal.show {
+  display: flex;
+}
+
+.modal-content {
+  background: #fff;
+  border: 1px solid var(--black);
+  padding: 20px;
+  width: 320px;
+  box-shadow: 4px 4px 0 var(--black);
+}
+
+.modal-content h2 {
+  margin-top: 0;
+  margin-bottom: 16px;
+  font-size: 16px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.modal-content input,
+.modal-content select,
+.modal-content button {
+  width: 100%;
+  padding: 8px 10px;
+  margin-bottom: 10px;
+  border: 1px solid var(--black);
+  background: #fff;
+  font-size: 14px;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.modal-actions button {
+  flex: 1;
+  cursor: pointer;
+}
+
+.modal-actions button:hover {
+  background: var(--black);
+  color: #fff;
+}
+</style>
+</head>
+<body>
+
+<h1>Kanban Board</h1>
+
+<!-- Add Task Button -->
+<div style="text-align:center; margin-bottom:32px;">
+  <button id="openModal">+ Add Task</button>
+</div>
+
+<!-- BOARD -->
+<div class="board">
+{% for col in ["todo","doing","done"] %}
+  <div class="column" data-status="{{ col }}">
+    <h2>{{ col|capitalize }}</h2>
+
+    {% for t in tasks if t.status == col %}
+      <div class="task"
+           draggable="true"
+           data-id="{{ t.id }}"
+           style="background: {{ t.color }};">
+        {{ t.title }}
+        <a href="/delete/{{ t.id }}">✕</a>
+      </div>
+    {% endfor %}
+  </div>
+{% endfor %}
+</div>
+
+<!-- MODAL -->
+<div class="modal" id="modal">
+  <div class="modal-content">
+    <h2>Add Task</h2>
+    <form method="post" action="/add">
+      <input name="title" placeholder="Task title" required>
+      <select name="status">
+        <option value="todo">Todo</option>
+        <option value="doing">Doing</option>
+        <option value="done">Done</option>
+      </select>
+      <div class="modal-actions">
+        <button type="submit">Add</button>
+        <button type="button" id="closeModal">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+let dragged = null;
+
+/* DRAG AND DROP */
+document.querySelectorAll(".task").forEach(t => {
+  t.ondragstart = () => dragged = t;
+  t.ondragend = () => dragged = null;
+});
+
+document.querySelectorAll(".column").forEach(col => {
+  col.ondragover = e => {
+    e.preventDefault();
+    col.classList.add("drag-over");
+  };
+
+  col.ondragleave = () => col.classList.remove("drag-over");
+
+  col.ondrop = () => {
+    col.classList.remove("drag-over");
+    if (!dragged) return;
+
+    const form = new FormData();
+    form.append("id", dragged.dataset.id);
+    form.append("status", col.dataset.status);
+
+    fetch("/move", { method: "POST", body: form })
+      .then(() => location.reload());
+  };
+});
+
+/* MODAL LOGIC */
+const modal = document.getElementById("modal");
+const openBtn = document.getElementById("openModal");
+const closeBtn = document.getElementById("closeModal");
+
+openBtn.onclick = () => modal.classList.add("show");
+closeBtn.onclick = () => modal.classList.remove("show");
+
+modal.onclick = e => {
+  if (e.target === modal) modal.classList.remove("show");
+};
+
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") modal.classList.remove("show");
+});
+</script>
+
+</body>
+</html>
