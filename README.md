@@ -16,5 +16,11 @@ A fast and simple **Kanban board** built with **Flask**, designed to stay minima
 ## One-liner Installation
 
 ```bash
-git clone https://github.com/baguswjksn/scaling-umbrella.git && cd scaling-umbrella && pip install flask && python app.py
+git clone https://github.com/baguswjksn/scaling-umbrella.git && cd scaling-umbrella && rm Kanban.png README.md && pip install flask && python app.py
+```
+
+or if you use python3 and pip3
+
+```bash
+git clone https://github.com/baguswjksn/scaling-umbrella.git && cd scaling-umbrella && rm Kanban.png README.md && pip3 install flask && python3 app.py
 ```
