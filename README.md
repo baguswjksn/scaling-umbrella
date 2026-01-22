@@ -24,3 +24,4 @@ or if you use python3 and pip3
 ```bash
 git clone https://github.com/baguswjksn/scaling-umbrella.git && cd scaling-umbrella && rm Kanban.png README.md && pip3 install flask && python3 app.py
 ```
+> now you can acces it by entering default pass secret123
